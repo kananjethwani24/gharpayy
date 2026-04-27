@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import AppLayout from '@/components/AppLayout';
 import AddLeadDialog from '@/components/AddLeadDialog';
 import LeadDetailDrawer from '@/components/LeadDetailDrawer';
@@ -37,6 +37,7 @@ const Leads = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedLead, setSelectedLead] = useState<LeadWithRelations | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
   const { data: paginatedData, isLoading } = useLeadsPaginated(page, PAGE_SIZE);
@@ -48,22 +49,24 @@ const Leads = () => {
   const deleteLeads = useDeleteLeads();
   const updateLead = useUpdateLead();
 
-  const filtered = (leads || [])
-    .filter(l => {
-      if (filterSource !== 'all' && l.source !== filterSource) return false;
-      if (filterStatus !== 'all' && l.status !== filterStatus) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'score_high': return (b.lead_score ?? 0) - (a.lead_score ?? 0);
-        case 'score_low': return (a.lead_score ?? 0) - (b.lead_score ?? 0);
-        case 'response': return (a.first_response_time_min ?? 999) - (b.first_response_time_min ?? 999);
-        default: return 0;
-      }
-    });
+  const filtered = useMemo(() => {
+    return (leads || [])
+      .filter(l => {
+        if (filterSource !== 'all' && l.source !== filterSource) return false;
+        if (filterStatus !== 'all' && l.status !== filterStatus) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'score_high': return (b.lead_score ?? 0) - (a.lead_score ?? 0);
+          case 'score_low': return (a.lead_score ?? 0) - (b.lead_score ?? 0);
+          case 'response': return (a.first_response_time_min ?? 999) - (b.first_response_time_min ?? 999);
+          default: return 0;
+        }
+      });
+  }, [leads, filterSource, filterStatus, sortBy]);
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
@@ -129,8 +132,10 @@ const Leads = () => {
   };
 
   const openDetail = (lead: LeadWithRelations) => {
-    setSelectedLead(lead);
-    setDrawerOpen(true);
+    startTransition(() => {
+      setSelectedLead(lead);
+      setDrawerOpen(true);
+    });
   };
 
   if (isLoading) {

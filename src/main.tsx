@@ -12,7 +12,7 @@ Sentry.init({
     Sentry.replayIntegration(),
   ],
   // Performance Monitoring
-  tracesSampleRate: 1.0, 
+  tracesSampleRate: 0.1, 
   // Session Replay
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
