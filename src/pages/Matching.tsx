@@ -27,7 +27,7 @@ const Matching = () => {
   const [selectedLead, setSelectedLead] = useState<string>('');
   const [matches, setMatches] = useState<any[]>([]);
 
-  const activeLeads = (leads || []).filter(l => l.status !== 'booked' && l.status !== 'lost');
+  const activeLeads = (leads || []);
   const lead = activeLeads.find(l => l.id === selectedLead);
 
   const handleMatch = async () => {

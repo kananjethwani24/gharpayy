@@ -20,11 +20,30 @@ export type VisitWithRelations = Visit & {
   agents: Pick<Agent, 'id' | 'name'> | null;
 };
 
+const isMockMode = () => !!localStorage.getItem('gharpayy_mock_user');
+
+const MOCK_LEADS: LeadWithRelations[] = [
+  { id: '1', name: 'Rahul Sharma', phone: '9602840812', email: 'rahul@gmail.com', source: 'whatsapp', status: 'new', created_at: new Date(Date.now() - 3600000 * 2).toISOString(), updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), assigned_agent_id: 'a1', property_id: 'p1', budget: '15k', preferred_location: 'Sector 62', notes: 'Interested in single occupancy', first_response_time_min: 3, lead_score: 85, tags: ['hot'], agents: { id: 'a1', name: 'John Agent' }, properties: { id: 'p1', name: 'Green Valley PG' } },
+  { id: '2', name: 'Priya Singh', phone: '9876543210', email: 'priya@example.com', source: 'website', status: 'contacted', created_at: new Date(Date.now() - 3600000 * 24).toISOString(), updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), assigned_agent_id: 'a2', property_id: 'p2', budget: '12k', preferred_location: 'Indirapuram', notes: 'Working in Noida', first_response_time_min: 12, lead_score: 45, tags: ['follow-up'], agents: { id: 'a2', name: 'Sarah Agent' }, properties: { id: 'p2', name: 'Zest Living' } },
+  { id: '3', name: 'Amit Verma', phone: '9988776655', email: 'amit@verma.com', source: 'instagram', status: 'booked', created_at: new Date(Date.now() - 3600000 * 72).toISOString(), updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), assigned_agent_id: 'a1', property_id: 'p1', budget: '18k', preferred_location: 'Sector 62', notes: 'Confirmed booking', first_response_time_min: 2, lead_score: 100, tags: ['vip'], agents: { id: 'a1', name: 'John Agent' }, properties: { id: 'p1', name: 'Green Valley PG' } },
+];
+
+const MOCK_AGENTS: Agent[] = [
+  { id: 'a1', name: 'John Agent', email: 'john@gharpayy.com', phone: '123', is_active: true, created_at: '', updated_at: '', user_id: '' },
+  { id: 'a2', name: 'Sarah Agent', email: 'sarah@gharpayy.com', phone: '456', is_active: true, created_at: '', updated_at: '', user_id: '' },
+];
+
+const MOCK_PROPERTIES: Property[] = [
+  { id: 'p1', name: 'Green Valley PG', address: 'Sec 62', city: 'Noida', area: 'Noida', price_range: '10k-20k', is_active: true, created_at: '', owner_id: '', amenities: [], gender_allowed: 'any', google_maps_link: '', photos: [], property_manager: '', total_beds: 50, total_rooms: 20, virtual_tour_link: '' },
+  { id: 'p2', name: 'Zest Living', address: 'Indirapuram', city: 'Ghaziabad', area: 'Ghaziabad', price_range: '8k-15k', is_active: true, created_at: '', owner_id: '', amenities: [], gender_allowed: 'any', google_maps_link: '', photos: [], property_manager: '', total_beds: 30, total_rooms: 12, virtual_tour_link: '' },
+];
+
 // Leads (all — used by Dashboard, Pipeline, etc.)
 export const useLeads = () =>
   useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
+      if (isMockMode()) return MOCK_LEADS;
       const { data, error } = await supabase
         .from('leads')
         .select('*, agents(id, name), properties(id, name)')
@@ -41,6 +60,7 @@ export const useLeadsPaginated = (page = 0, pageSize = 50) =>
   useQuery({
     queryKey: ['leads-paginated', page, pageSize],
     queryFn: async () => {
+      if (isMockMode()) return { leads: MOCK_LEADS, total: MOCK_LEADS.length };
       const from = page * pageSize;
       const to = from + pageSize - 1;
       const { data, error, count } = await supabase
@@ -57,6 +77,7 @@ export const useLeadsByStatus = (status: string) =>
   useQuery({
     queryKey: ['leads', 'status', status],
     queryFn: async () => {
+      if (isMockMode()) return MOCK_LEADS.filter(l => l.status === status);
       const { data, error } = await supabase
         .from('leads')
         .select('*, agents(id, name), properties(id, name)')
@@ -71,6 +92,11 @@ export const useCreateLead = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (lead: Database['public']['Tables']['leads']['Insert']) => {
+      if (isMockMode()) {
+        const newLead = { ...lead, id: Math.random().toString(), created_at: new Date().toISOString() };
+        MOCK_LEADS.unshift({ ...newLead, agents: null, properties: null } as any);
+        return newLead;
+      }
       const { data, error } = await supabase.from('leads').insert(lead).select().single();
       if (error) throw error;
       return data;
@@ -86,6 +112,7 @@ export const useUpdateLead = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Database['public']['Tables']['leads']['Update']) => {
+      if (isMockMode()) return { ...updates, id };
       const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
@@ -102,6 +129,7 @@ export const useAgents = () =>
   useQuery({
     queryKey: ['agents'],
     queryFn: async () => {
+      if (isMockMode()) return MOCK_AGENTS;
       const { data, error } = await supabase.from('agents').select('*').eq('is_active', true).order('name');
       if (error) throw error;
       return data;
@@ -113,6 +141,7 @@ export const useProperties = () =>
   useQuery({
     queryKey: ['properties'],
     queryFn: async () => {
+      if (isMockMode()) return MOCK_PROPERTIES;
       const { data, error } = await supabase.from('properties').select('*').eq('is_active', true).order('name');
       if (error) throw error;
       return data;
@@ -124,6 +153,7 @@ export const useVisits = () =>
   useQuery({
     queryKey: ['visits'],
     queryFn: async () => {
+      if (isMockMode()) return [];
       const { data, error } = await supabase
         .from('visits')
         .select('*, leads(id, name), properties(id, name), agents:assigned_staff_id(id, name)')
@@ -138,6 +168,7 @@ export const useCreateVisit = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (visit: Database['public']['Tables']['visits']['Insert']) => {
+      if (isMockMode()) return visit;
       const { data, error } = await supabase.from('visits').insert(visit).select().single();
       if (error) throw error;
       return data;
@@ -151,6 +182,19 @@ export const useDashboardStats = () =>
   useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
+      if (isMockMode()) {
+        return {
+          totalLeads: 128,
+          newToday: 12,
+          avgResponseTime: 4.2,
+          slaCompliance: 94,
+          slaBreaches: 3,
+          conversionRate: 18.5,
+          visitsScheduled: 8,
+          visitsCompleted: 42,
+          bookingsClosed: 24,
+        };
+      }
       const [leadsRes, visitsRes] = await Promise.all([
         supabase.from('leads').select('id, status, first_response_time_min, source, created_at'),
         supabase.from('visits').select('id, outcome, scheduled_at'),
@@ -196,6 +240,15 @@ export const useAgentStats = () =>
   useQuery({
     queryKey: ['agent-stats'],
     queryFn: async () => {
+      if (isMockMode()) {
+        return MOCK_AGENTS.map(agent => ({
+          ...agent,
+          totalLeads: 24,
+          activeLeads: 12,
+          avgResponseTime: 3.5,
+          conversions: 4,
+        }));
+      }
       const [agentsRes, leadsRes] = await Promise.all([
         supabase.from('agents').select('*').eq('is_active', true),
         supabase.from('leads').select('id, status, assigned_agent_id, first_response_time_min'),

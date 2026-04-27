@@ -47,6 +47,26 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Hardcoded bypass for demo@gmail.com
+    if (email === 'demo@gmail.com' && password === 'demo1234') {
+      const mockUser = {
+        id: 'mock-user-id',
+        email: 'demo@gmail.com',
+        user_metadata: { full_name: 'Demo Admin' },
+        app_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      };
+      localStorage.setItem('gharpayy_mock_user', JSON.stringify(mockUser));
+      toast.success('Welcome back (Demo Mode)');
+      // Small delay to let localStorage settle then reload to trigger AuthContext
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
+      return;
+    }
+
     // Ensure demo account exists first
     if (email === 'demo@gharpayy.com') await ensureDemoAccount();
     const { error } = await supabase.auth.signInWithPassword({ email, password });

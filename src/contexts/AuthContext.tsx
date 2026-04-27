@@ -51,6 +51,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Check for mock user bypass
+    const mockUserStr = localStorage.getItem('gharpayy_mock_user');
+    if (mockUserStr) {
+      try {
+        const mockUser = JSON.parse(mockUserStr);
+        setUser(mockUser);
+        setRole('admin'); // Hardcode role to admin for bypass
+        setLoading(false);
+        return; // Skip normal Supabase auth if bypassed
+      } catch (e) {
+        localStorage.removeItem('gharpayy_mock_user');
+      }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -63,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (localStorage.getItem('gharpayy_mock_user')) return; // Prioritize mock user
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -75,8 +90,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    localStorage.removeItem('gharpayy_mock_user');
     await supabase.auth.signOut();
     setRole(null);
+    setUser(null);
+    setSession(null);
   };
 
   const isAdmin = role === 'admin';
